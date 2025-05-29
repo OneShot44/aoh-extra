@@ -1,0 +1,250 @@
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Punch = ReplicatedStorage:WaitForChild("Events"):WaitForChild("Punch")
+
+local windowVisible = true
+local keyToPunch = Enum.KeyCode.C -- tecla padrão
+local espEnabled = false
+local espLabels = {}
+
+-- Criar GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "jooj_GUI"
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 380, 0, 260)
+Frame.Position = UDim2.new(0.5, -190, 0.5, -130)
+Frame.BackgroundColor3 = Color3.fromRGB(70, 130, 180) -- Azul Steel
+Frame.BorderSizePixel = 0
+Frame.ClipsDescendants = true
+Frame.Parent = ScreenGui
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.BackgroundTransparency = 1 -- invisível para fade
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 15)
+Corner.Parent = Frame
+
+-- Barra de título para mover a janela
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(40, 70, 120)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = Frame
+TitleBar.BackgroundTransparency = 0
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 1, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "created by jooj_."
+TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 22
+TitleLabel.Parent = TitleBar
+
+-- Label para instruções
+local InstructionLabel = Instance.new("TextLabel")
+InstructionLabel.Size = UDim2.new(1, -40, 0, 30)
+InstructionLabel.Position = UDim2.new(0, 20, 0, 50)
+InstructionLabel.BackgroundTransparency = 1
+InstructionLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+InstructionLabel.Font = Enum.Font.Gotham
+InstructionLabel.TextSize = 17
+InstructionLabel.Text = "Press a key to set the extra hit button:"
+InstructionLabel.TextXAlignment = Enum.TextXAlignment.Left
+InstructionLabel.Parent = Frame
+
+-- Mostrar tecla escolhida
+local KeyLabel = Instance.new("TextLabel")
+KeyLabel.Size = UDim2.new(0, 90, 0, 30)
+KeyLabel.Position = UDim2.new(0, 20, 0, 85)
+KeyLabel.BackgroundColor3 = Color3.fromRGB(100, 149, 237)
+KeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyLabel.Font = Enum.Font.GothamBold
+KeyLabel.TextSize = 18
+KeyLabel.Text = keyToPunch.Name
+KeyLabel.Parent = Frame
+
+local waitingForKey = false
+
+-- Botão para mudar a tecla
+local ChangeKeyButton = Instance.new("TextButton")
+ChangeKeyButton.Size = UDim2.new(0, 110, 0, 30)
+ChangeKeyButton.Position = UDim2.new(0, 130, 0, 85)
+ChangeKeyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+ChangeKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ChangeKeyButton.Font = Enum.Font.Gotham
+ChangeKeyButton.TextSize = 16
+ChangeKeyButton.Text = "Extra Key"
+ChangeKeyButton.Parent = Frame
+
+-- Botão para ligar/desligar ESP
+local ESPToggleButton = Instance.new("TextButton")
+ESPToggleButton.Size = UDim2.new(0, 110, 0, 30)
+ESPToggleButton.Position = UDim2.new(0, 20, 0, 130)
+ESPToggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+ESPToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPToggleButton.Font = Enum.Font.Gotham
+ESPToggleButton.TextSize = 16
+ESPToggleButton.Text = "ESP OFF"
+ESPToggleButton.Parent = Frame
+
+-- Função para criar/destroir labels de ESP
+local function createESP()
+	-- Limpa os antigos
+	for plr, label in pairs(espLabels) do
+		if label then
+			label:Destroy()
+		end
+	end
+	espLabels = {}
+
+	if not espEnabled then return end
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local billboard = Instance.new("BillboardGui")
+			billboard.Name = "ESP"
+			billboard.Adornee = player.Character.HumanoidRootPart
+			billboard.Size = UDim2.new(0, 120, 0, 30)
+			billboard.AlwaysOnTop = true
+			billboard.Parent = ScreenGui
+
+			local textLabel = Instance.new("TextLabel")
+			textLabel.BackgroundTransparency = 1
+			textLabel.Size = UDim2.new(1, 0, 1, 0)
+			textLabel.Font = Enum.Font.GothamBold
+			textLabel.TextSize = 16
+			textLabel.TextStrokeTransparency = 0.5
+			textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			textLabel.Parent = billboard
+
+			-- Define a cor do texto conforme o time
+			local teamName = player.Team and player.Team.Name or ""
+			if teamName:lower():find("villain") or teamName:lower():find("enemy") then
+				textLabel.TextColor3 = Color3.fromRGB(180, 0, 255) -- Roxo para vilões
+			elseif teamName:lower():find("hero") then
+				textLabel.TextColor3 = Color3.fromRGB(0, 130, 255) -- Azul para heróis
+			else
+				textLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Branco padrão
+			end
+
+			-- Atualiza o texto do label
+			textLabel.Text = player.Name
+			espLabels[player] = billboard
+		end
+	end
+end
+
+-- Atualizar ESP a cada frame para players novos e removidos
+RunService.Heartbeat:Connect(function()
+	if espEnabled then
+		for plr, billboard in pairs(espLabels) do
+			if not plr.Parent or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+				if billboard then
+					billboard:Destroy()
+				end
+				espLabels[plr] = nil
+			end
+		end
+
+		for _, player in pairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer and not espLabels[player] and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				createESP()
+				break
+			end
+		end
+	end
+end)
+
+ESPToggleButton.MouseButton1Click:Connect(function()
+	espEnabled = not espEnabled
+	if espEnabled then
+		ESPToggleButton.Text = "ESP ON"
+		createESP()
+	else
+		ESPToggleButton.Text = "ESP OFF"
+		for plr, label in pairs(espLabels) do
+			if label then label:Destroy() end
+		end
+		espLabels = {}
+	end
+end)
+
+ChangeKeyButton.MouseButton1Click:Connect(function()
+	waitingForKey = true
+	InstructionLabel.Text = "Press any key..."
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+
+	if waitingForKey then
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			keyToPunch = input.KeyCode
+			KeyLabel.Text = keyToPunch.Name
+			InstructionLabel.Text = "Press a key to set the extra hit button:"
+			waitingForKey = false
+		end
+		return
+	end
+
+	-- Minimizar/restaurar
+	if input.KeyCode == Enum.KeyCode.End then
+		windowVisible = not windowVisible
+		Frame.Visible = windowVisible
+	end
+
+	-- Extra hit
+	if input.KeyCode == keyToPunch then
+		Punch:FireServer(0, 0.1, 1)
+	end
+end)
+
+-- Permitir mover a janela pelo TitleBar
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function updatePosition(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		updatePosition(input)
+	end
+end)
+
+-- Fade in da interface
+local tweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local tween = tweenService:Create(Frame, tweenInfo, {BackgroundTransparency = 0})
+tween:Play()
